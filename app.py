@@ -43,7 +43,7 @@ if 'coin_volume' not in st.session_state:
     st.session_state.coin_volume = coin_volume
 if 'coin_price' not in st.session_state:
     st.session_state.coin_price = initial_coin_price
-    log_price(initial_coin_price)  # Log initial share price
+    log_price(initial_coin_price)  # Log initial coin price
 if 'selected_investor' not in st.session_state:
     st.session_state.selected_investor = None
 if 'current_investor_index' not in st.session_state:
@@ -79,7 +79,7 @@ def buy_coins(investor_id, num_coins):
         st.session_state.coin_volume -= num_coins
         st.session_state.coin_price *= (1 + num_coins / st.session_state.coin_volume * 5)
         update_investor(investor_id, funds, coins)
-        log_price(st.session_state.coin_price)  # Log updated share price
+        log_price(st.session_state.coin_price)  # Log updated coin price
         st.success(f'Bought {num_coins} coins at ${st.session_state.coin_price:.2f} each')
 
 def sell_coins(investor_id, num_coins):
@@ -91,7 +91,7 @@ def sell_coins(investor_id, num_coins):
         st.session_state.coin_volume += num_coins
         st.session_state.coin_price *= (1 - num_coins / st.session_state.coin_volume * 5)
         update_investor(investor_id, funds, coins)
-        log_price(st.session_state.coin_price)  # Log updated share price
+        log_price(st.session_state.coin_price)  # Log updated coin price
         st.success(f'Sold {num_coins} coins at ${st.session_state.coin_price:.2f} each')
 
 
@@ -266,16 +266,16 @@ if selected_investor_id:
     # else:
     #     st.write("You don't have any coins to sell.")
 
-# Retrieve and plot share price history
+# Retrieve and plot coin price history
 price_history = get_price_history()
 if price_history:
     df = pd.DataFrame(price_history, columns=['transaction', 'coin_price'])
     
     chart = alt.Chart(df).mark_line(point=True).encode(
         x=alt.X('transaction:Q', title='Transactions'),
-        y=alt.Y('coin_price:Q', title='Share Price', axis=alt.Axis(format='$'))
+        y=alt.Y('coin_price:Q', title='Coin Price', axis=alt.Axis(format='$'))
     ).properties(
-        title='Share Price History',
+        title='Coin Price History',
         width=800,
         height=400
     ).configure_axis(
@@ -291,4 +291,4 @@ if price_history:
     st.altair_chart(chart)
 
 st.write('---')
-st.write('Note: Share price is adjusted based on the transaction volume relative to available coins.')
+st.write('Note: Coin price is adjusted based on the transaction volume relative to available coins.')
