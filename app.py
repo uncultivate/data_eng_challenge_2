@@ -3,6 +3,9 @@ import sqlite3
 import datetime
 import altair as alt
 import pandas as pd
+import time
+from streamlit_autorefresh import st_autorefresh
+
 
 # Initialize SQLite database
 conn = sqlite3.connect('coin_price_history.db')
@@ -35,19 +38,26 @@ def log_price(price):
     conn.commit()
 
 # Initial settings
-coin_volume = 40000
+initial_coin_volume = 10000
 initial_coin_price = 1.0
 
 # Session state to store dynamic variables
 if 'coin_volume' not in st.session_state:
-    st.session_state.coin_volume = coin_volume
+    st.session_state.coin_volume = initial_coin_volume
 if 'coin_price' not in st.session_state:
     st.session_state.coin_price = initial_coin_price
     log_price(initial_coin_price)  # Log initial coin price
+if 'previous_coin_price' not in st.session_state:
+    st.session_state.previous_coin_price = initial_coin_price
 if 'selected_investor' not in st.session_state:
     st.session_state.selected_investor = None
 if 'current_investor_index' not in st.session_state:
     st.session_state.current_investor_index = 0
+if 'success_message' not in st.session_state:
+    st.session_state.success_message = ""
+# Initialize count in session state
+if 'count' not in st.session_state:
+    st.session_state.count = 0
 
 # Function to add a new investor
 def add_investor(name, funds, strategy):
@@ -77,10 +87,11 @@ def buy_coins(investor_id, num_coins):
         funds -= total_cost
         coins += num_coins
         st.session_state.coin_volume -= num_coins
-        st.session_state.coin_price *= (1 + num_coins / st.session_state.coin_volume * 5)
+        new_price = initial_coin_volume/st.session_state.coin_volume # y = k/x
+        st.session_state.coin_price = new_price
         update_investor(investor_id, funds, coins)
         log_price(st.session_state.coin_price)  # Log updated coin price
-        st.success(f'Bought {num_coins} coins at ${st.session_state.coin_price:.2f} each')
+        st.session_state.success_message = f'Bought {num_coins} coins at ${st.session_state.coin_price:.2f} each'
 
 def sell_coins(investor_id, num_coins):
     funds, coins, _ = get_investor_details(investor_id)  # Ignore the strategy value
@@ -89,10 +100,11 @@ def sell_coins(investor_id, num_coins):
         funds += total_revenue
         coins -= num_coins
         st.session_state.coin_volume += num_coins
-        st.session_state.coin_price *= (1 - num_coins / st.session_state.coin_volume * 5)
+        new_price = initial_coin_volume/st.session_state.coin_volume # y = k/x
+        st.session_state.coin_price = new_price
         update_investor(investor_id, funds, coins)
         log_price(st.session_state.coin_price)  # Log updated coin price
-        st.success(f'Sold {num_coins} coins at ${st.session_state.coin_price:.2f} each')
+        st.session_state.success_message = f'Sold {num_coins} coins at ${st.session_state.coin_price:.2f} each'
 
 
 def get_price_history():
@@ -158,6 +170,12 @@ new_investor_strategy = st.sidebar.selectbox('Strategy', strategy_options)
 if st.sidebar.button('Add Investor'):
     add_investor(new_investor_name, new_investor_funds, new_investor_strategy)
     st.sidebar.success(f'Investor {new_investor_name} added with strategy {new_investor_strategy}.')
+if st.sidebar.button('Test Investor'):
+    add_investor('Jono', 1000, 'strategy_1')
+    add_investor('Jacob', 1000, 'strategy_2')
+    add_investor('Axel', 1000, 'strategy_3')
+    add_investor('Whale', 5000, 'strategy_1')
+    st.sidebar.success(f'Test Investors: {new_investor_name} added with strategy {new_investor_strategy}.')
 
 # Sidebar button to reset investors table
 if st.sidebar.button('Reset'):
@@ -186,16 +204,12 @@ if st.sidebar.button('Reset'):
 # List of investors and their total assets in the sidebar
 st.sidebar.header('Investors Overview')
 investors = get_investors()
-for investor_id, investor_name in investors:
-    funds, coins = get_investor_details(investor_id)[:2]
-    total_assets = funds + coins * st.session_state.coin_price
-    st.sidebar.write(f'{investor_name}: ${total_assets:.2f}')
+
 
 # Select investor
 st.sidebar.header('Select Investor')
 investor_names = {investor[0]: investor[1] for investor in investors}
-selected_investor_id = st.sidebar.selectbox('Investor', list(investor_names.keys()), format_func=lambda x: investor_names[x])
-
+#selected_investor_id = st.sidebar.selectbox('Investor', list(investor_names.keys()), format_func=lambda x: investor_names[x])
 # Function to get the strategy function by name
 def get_strategy_function(strategy_name):
     strategies = {
@@ -205,75 +219,101 @@ def get_strategy_function(strategy_name):
     }
     return strategies.get(strategy_name)
 
+
+
+
+# Update the previous coin price for the next iteration
+st.session_state.previous_coin_price = st.session_state.coin_price
+
 # Function to get investor details, including the strategy
 def get_investor_details(investor_id):
     c.execute('SELECT funds, coins, strategy FROM investors WHERE id = ?', (investor_id,))
     return c.fetchone()
 
-# Integration into the Streamlit App
-if selected_investor_id:
-    st.session_state.selected_investor = selected_investor_id
-    funds, coins, strategy = get_investor_details(selected_investor_id)
-    investor_name = investor_names[selected_investor_id]
+# Button to start trading day
+if st.sidebar.button('Trading Day'):
+    st.session_state.trading_started = True
+
+# Only start the autorefresh if trading has started
+if st.session_state.get('trading_started', False):
+    count = st_autorefresh(interval=5000, limit=100, key="investor_counter")
+    st.sidebar.write(f"Current count: {count}")
+
+    selected_investor_id = (count % 4) + 1
+else:
+    selected_investor_id = 1
+
+st.session_state.selected_investor = selected_investor_id
+funds, coins, strategy = get_investor_details(selected_investor_id)
+investor_name = investor_names[selected_investor_id]
+price_history = get_price_history()
+
+if st.session_state.get('trading_started', False):
+
+
+    df = pd.DataFrame(price_history, columns=['transaction', 'coin_price'])
+    strategy_function = get_strategy_function(strategy)
+    if strategy_function:
+        instruction, proportion = strategy_function(df)
+        if instruction == 'buy':
+            num_coins_to_buy = int((proportion * funds) / st.session_state.coin_price)
+            if num_coins_to_buy > 0:
+                buy_coins(selected_investor_id, num_coins_to_buy)
+        elif instruction == 'sell':
+            num_coins_to_sell = int(proportion * coins)
+            if num_coins_to_sell > 0:
+                sell_coins(selected_investor_id, num_coins_to_sell)
+        else:
+            st.session_state.success_message = 'Hold: No action taken'
+
 
     st.header('CensusCoin (CC) Overview')  
     col1, col2 = st.columns(2)
     col1.metric("Coin Volume", st.session_state.coin_volume)
-    col2.metric("Current Price", f"${st.session_state.coin_price:.2f}")
+    # Calculate price change for the metric
+    price_change = st.session_state.coin_price - st.session_state.previous_coin_price
+    if price_change < 0:
+        price_delta = f"-${abs(price_change):.2f}"
+    else:
+        price_delta = f"${price_change:.2f}"
 
+
+
+    col2.metric("Current Price", f"${st.session_state.coin_price:.2f}", price_delta)
+
+    funds, coins, strategy = get_investor_details(selected_investor_id)
     st.header(f'Investor Overview: {investor_name}')
     col1, col2, col3 = st.columns(3)
     col1.metric("Investor Funds", f"${funds:.2f}")
     col2.metric("Investor coins", coins)
     col3.metric("Total Assets", f"${funds + coins * st.session_state.coin_price:.2f}")
- 
-    if st.button('Execute Trade'):
-        price_history = get_price_history()
-        df = pd.DataFrame(price_history, columns=['transaction', 'coin_price'])
-        strategy_function = get_strategy_function(strategy)
-        if strategy_function:
-            instruction, proportion = strategy_function(df)
-            if instruction == 'buy':
-                num_coins_to_buy = int((proportion * funds) / st.session_state.coin_price)
-                if num_coins_to_buy > 0:
-                    buy_coins(selected_investor_id, num_coins_to_buy)
-                    st.rerun()  # Rerun the app to update metrics
-            elif instruction == 'sell':
-                num_coins_to_sell = int(proportion * coins)
-                if num_coins_to_sell > 0:
-                    sell_coins(selected_investor_id, num_coins_to_sell)
-                    st.rerun()  # Rerun the app to update metrics
-            else:
-                st.info('Hold: No action taken')
 
-        # Select the next investor
-        st.session_state.current_investor_index = (st.session_state.current_investor_index + 1) % len(investor_names)
-        st.rerun()
+    if st.session_state.success_message:
+        if st.session_state.success_message == 'Hold: No action taken':
+            st.info(st.session_state.success_message)
+        else:
+            st.success(st.session_state.success_message)
+        st.session_state.success_message = ""
+
     st.divider()
 
-    # st.subheader('Buy coins')
-    # num_coins_to_buy = st.number_input('Number of coins to buy:', min_value=1, max_value=st.session_state.coin_volume, value=1)
-    # if st.button('Buy'):
-    #     buy_coins(selected_investor_id, num_coins_to_buy)
-    #     st.rerun()  # Rerun the app to update metrics
-
-    # st.subheader('Sell coins')
-    # if coins > 0:
-    #     num_coins_to_sell = st.number_input('Number of coins to sell:', min_value=1, max_value=coins, value=1)
-    #     if st.button('Sell'):
-    #         sell_coins(selected_investor_id, num_coins_to_sell)
-    #         st.rerun()  # Rerun the app to update metrics
-    # else:
-    #     st.write("You don't have any coins to sell.")
+for investor_id, investor_name in investors:
+    funds, coins = get_investor_details(investor_id)[:2]
+    total_assets = funds + coins * st.session_state.coin_price
+    st.sidebar.write(f'{investor_name}: ${total_assets:.2f}')
 
 # Retrieve and plot coin price history
 price_history = get_price_history()
 if price_history:
     df = pd.DataFrame(price_history, columns=['transaction', 'coin_price'])
+
+    # Get the minimum and maximum coin prices
+    min_price = df['coin_price'].min()
+    max_price = df['coin_price'].max()
     
     chart = alt.Chart(df).mark_line(point=True).encode(
         x=alt.X('transaction:Q', title='Transactions'),
-        y=alt.Y('coin_price:Q', title='Coin Price', axis=alt.Axis(format='$'))
+        y=alt.Y('coin_price:Q', title='Coin Price', scale=alt.Scale(domain=[min_price, max_price]), axis=alt.Axis(format='$'))
     ).properties(
         title='Coin Price History',
         width=800,
