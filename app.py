@@ -270,10 +270,12 @@ if price_history:
         axis={'labelColor': 'white', 'titleColor': 'white'}
     )
     
-    st.altair_chart(chart)
+    st.altair_chart(chart, use_container_width=True)
 
-st.write('---')
 st.write('Note: Coin price is adjusted based on the transaction volume relative to available coins.')
+st.write('---')
+
+st.write("Step right up and plant the seeds of your success with Tulip Coin! Who wouldn't want to invest in the next big thing that combines the rich history of 17th century Holland with the endless hype of the digital age? With its limited supply and radiant hues, Tulip Coin is your ticket to a blooming fortune! Join the garden of savvy investors who see the potential in this floral commodity on a rocket to the moon! 🌷💰")
 
 if st.sidebar.button('Reset'):
     c.execute('DROP TABLE IF EXISTS investors')
