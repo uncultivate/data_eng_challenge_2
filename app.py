@@ -1,67 +1,76 @@
 import streamlit as st
 import sqlite3
-import datetime
+from datetime import datetime, timedelta, time as timed
+import time
+import pytz
 import altair as alt
 import pandas as pd
-import time
 from streamlit_autorefresh import st_autorefresh
 
+# Database Initialization
+def init_db():
+    conn = sqlite3.connect('coin_price_history.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS price_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            coin_price REAL
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS investors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            funds REAL,
+            coins INTEGER,
+            strategy TEXT,
+            timestamp TEXT
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS coin_status (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            volume INTEGER,
+            price REAL,
+            previous_price REAL
+        )
+    ''')
+    conn.commit()
+    return conn, c
 
-# Initialize SQLite database
-conn = sqlite3.connect('coin_price_history.db')
-c = conn.cursor()
+conn, c = init_db()
 
-# Create tables
-c.execute('''
-    CREATE TABLE IF NOT EXISTS price_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        coin_price REAL
-    )
-''')
+# Initial settings
+initial_coin_volume = 100000
+initial_coin_price = 0.1
+k = initial_coin_volume * initial_coin_price
+n_investors = 5
 
-# Create or update the investors table schema
-c.execute('''
-    CREATE TABLE IF NOT EXISTS investors (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        funds REAL,
-        coins INTEGER,
-        strategy TEXT
-    )
-''')
-conn.commit()
-
+# Function to log the price in the database
 def log_price(price):
-    timestamp = datetime.datetime.now().isoformat()
+    timestamp = datetime.now()
     c.execute('INSERT INTO price_history (timestamp, coin_price) VALUES (?, ?)', (timestamp, price))
     conn.commit()
 
-# Initial settings
-initial_coin_volume = 10000
-initial_coin_price = 1.0
+# Function to get the latest coin status
+def get_coin_status():
+    c.execute('SELECT volume, price, previous_price FROM coin_status ORDER BY id DESC LIMIT 1')
+    return c.fetchone()
 
-# Session state to store dynamic variables
-if 'coin_volume' not in st.session_state:
-    st.session_state.coin_volume = initial_coin_volume
-if 'coin_price' not in st.session_state:
-    st.session_state.coin_price = initial_coin_price
-    log_price(initial_coin_price)  # Log initial coin price
-if 'previous_coin_price' not in st.session_state:
-    st.session_state.previous_coin_price = initial_coin_price
-if 'selected_investor' not in st.session_state:
-    st.session_state.selected_investor = None
-if 'current_investor_index' not in st.session_state:
-    st.session_state.current_investor_index = 0
-if 'success_message' not in st.session_state:
-    st.session_state.success_message = ""
-# Initialize count in session state
-if 'count' not in st.session_state:
-    st.session_state.count = 0
+# Function to update coin status
+def update_coin_status(volume, price, previous_price):
+    c.execute('INSERT INTO coin_status (volume, price, previous_price) VALUES (?, ?, ?)', (volume, price, previous_price))
+    conn.commit()
+
+# Initialize the coin status if it does not exist
+if not get_coin_status():
+    update_coin_status(initial_coin_volume, initial_coin_price, initial_coin_price)
+    log_price(initial_coin_price)
 
 # Function to add a new investor
-def add_investor(name, funds, strategy):
-    c.execute('INSERT INTO investors (name, funds, coins, strategy) VALUES (?, ?, 1000, ?)', (name, funds, strategy))
+def add_investor(name, funds, strategy, timestamp):
+    c.execute('INSERT INTO investors (name, funds, coins, strategy, timestamp) VALUES (?, ?, 0, ?, ?)', (name, funds, strategy, timestamp))
     conn.commit()
 
 # Function to get list of investors
@@ -71,72 +80,86 @@ def get_investors():
 
 # Function to get investor details
 def get_investor_details(investor_id):
-    c.execute('SELECT funds, coins FROM investors WHERE id = ?', (investor_id,))
+    c.execute('SELECT funds, coins, strategy FROM investors WHERE id = ?', (investor_id,))
     return c.fetchone()
 
 # Function to update investor details
 def update_investor(investor_id, funds, coins):
-    c.execute('UPDATE investors SET funds = ?, coins = ? WHERE id = ?', (funds, coins, investor_id))
+    timestamp = datetime.now()
+    c.execute('UPDATE investors SET funds = ?, coins = ?, timestamp = ? WHERE id = ?', (funds, coins, timestamp, investor_id))
     conn.commit()
 
+# Function to select current investor
+def select_current_investor():
+    c.execute('SELECT id, timestamp FROM investors ORDER BY timestamp ASC')
+    result =  c.fetchone()
+    if result:
+        return result[0] # Extract the id value from the tuple
+    return None  # Handle case where no rows are returned
+
+def adjusted_datetime(dt, seconds):
+    return dt - timedelta(seconds=seconds)
+
 # Functions to handle buying and selling of coins
-def buy_coins(investor_id, num_coins):
+def buy_coins(investor_id, num_coins, current_price):
     funds, coins, _ = get_investor_details(investor_id)
-    total_cost = num_coins * st.session_state.coin_price
-    if total_cost <= funds and num_coins <= st.session_state.coin_volume:
+    total_cost = num_coins * current_price
+    if total_cost <= funds:
         funds -= total_cost
         coins += num_coins
-        st.session_state.coin_volume -= num_coins
-        new_price = initial_coin_volume/st.session_state.coin_volume # y = k/x
-        st.session_state.coin_price = new_price
+        volume, price, previous_price = get_coin_status()
+        volume -= num_coins
+        new_price = k / volume  # y = k/x
+        update_coin_status(volume, new_price, price)
         update_investor(investor_id, funds, coins)
-        log_price(st.session_state.coin_price)  # Log updated coin price
-        st.session_state.success_message = f'Bought {num_coins} coins at ${st.session_state.coin_price:.2f} each'
+        log_price(new_price)
+        return f'Bought {num_coins} coins at ${current_price:.2f} each'
+    return 'Hold: No action taken'
 
-def sell_coins(investor_id, num_coins):
-    funds, coins, _ = get_investor_details(investor_id)  # Ignore the strategy value
+def sell_coins(investor_id, num_coins, current_price):
+    funds, coins, _ = get_investor_details(investor_id)
     if num_coins <= coins:
-        total_revenue = num_coins * st.session_state.coin_price
+        total_revenue = num_coins * current_price
         funds += total_revenue
         coins -= num_coins
-        st.session_state.coin_volume += num_coins
-        new_price = initial_coin_volume/st.session_state.coin_volume # y = k/x
-        st.session_state.coin_price = new_price
+        volume, price, previous_price = get_coin_status()
+        volume += num_coins
+        new_price = k / volume  # y = k/x
+        update_coin_status(volume, new_price, price)
         update_investor(investor_id, funds, coins)
-        log_price(st.session_state.coin_price)  # Log updated coin price
-        st.session_state.success_message = f'Sold {num_coins} coins at ${st.session_state.coin_price:.2f} each'
+        log_price(new_price)
+        return f'Sold {num_coins} coins at ${current_price:.2f} each'
+    return 'Hold: No action taken'
 
-
+# Function to get price history
 def get_price_history():
     c.execute('SELECT id, coin_price FROM price_history')
     return c.fetchall()
 
-st.title('Challenge #2: Trading Day')
+# Function to get the strategy function by name
+def get_strategy_function(strategy_name):
+    strategies = {
+        'strategy_1': strategy_1,
+        'strategy_2': strategy_2,
+        'strategy_3': strategy_3,
+        'strategy_4': strategy_4
+    }
+    return strategies.get(strategy_name)
 
-#################################################
-# INVESTORS
-
-price_history = get_price_history()
-if price_history:
-    df = pd.DataFrame(price_history, columns=['transaction', 'coin_price'])
-
-def strategy_1(df: pd.DataFrame) -> (str, float):
-    if len(df) < 2:
+# Define strategies
+def strategy_1(df):
+    if len(df) < 5:
+        return 'buy', 0.5
+    elif len(df) <= 20:
         return 'buy', 0.2 
-        
     last_price = df['coin_price'].iloc[-1]
-    second_last_price = df['coin_price'].iloc[-2]
-    
-    if last_price > second_last_price:
-        return 'sell', 0.5
-    else:
-        return 'buy', 0.4
+    if len(df) > 20:
+        return 'sell', 1
+    return 'buy', 0.4
 
-    
-def strategy_2(df: pd.DataFrame) -> (str, float):
+def strategy_2(df):
     if len(df) < 2:
-        return 'sell', 0.5  # Not enough data to make a decision
-
+        return 'sell', 0.5
     last_price = df['coin_price'].iloc[-1]
     second_last_price = df['coin_price'].iloc[-2]
     price_change = (last_price - second_last_price) / second_last_price
@@ -144,173 +167,120 @@ def strategy_2(df: pd.DataFrame) -> (str, float):
         return 'sell', 0.5
     elif price_change < 0:
         return 'buy', 0.5
-    else:
-        return 'hold', 0.0
+    return 'hold', 0.0
 
-def strategy_3(df: pd.DataFrame) -> (str, float):
+def strategy_3(df):
     if len(df) < 5:
-        return 'buy', 0.1  # Not enough data to make a decision
-
+        return 'buy', 0.1
     last_price = df['coin_price'].iloc[-1]
     last_five_prices = df['coin_price'].iloc[-5:]
-
     if last_price == last_five_prices.max():
         return 'sell', 0.5
     elif last_price == last_five_prices.min():
         return 'buy', 0.5
-    else:
-        return 'hold', 0.0
+    return 'hold', 0.0
 
-# Add new investor
-st.sidebar.header('Add New Investor')
-new_investor_name = st.sidebar.text_input('Investor Name')
-new_investor_funds = st.sidebar.number_input('Initial Funds', min_value=1.0, value=1000.0)
-strategy_options = ['strategy_1', 'strategy_2', 'strategy_3']
-new_investor_strategy = st.sidebar.selectbox('Strategy', strategy_options)
-if st.sidebar.button('Add Investor'):
-    add_investor(new_investor_name, new_investor_funds, new_investor_strategy)
-    st.sidebar.success(f'Investor {new_investor_name} added with strategy {new_investor_strategy}.')
-if st.sidebar.button('Test Investor'):
-    add_investor('Jono', 1000, 'strategy_1')
-    add_investor('Jacob', 1000, 'strategy_2')
-    add_investor('Axel', 1000, 'strategy_3')
-    add_investor('Whale', 5000, 'strategy_1')
-    st.sidebar.success(f'Test Investors: {new_investor_name} added with strategy {new_investor_strategy}.')
+def strategy_4(df):
+    if len(df) > 10:
+        return 'buy', 0.5
+    return 'hold', 0.0
 
-# Sidebar button to reset investors table
+# Main UI and Logic
+st.title('Challenge #2: Trading Day')
+
+# Sidebar Buttons
+
+
 if st.sidebar.button('Reset'):
     c.execute('DROP TABLE IF EXISTS investors')
-    c.execute('''
-        CREATE TABLE investors (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            funds REAL,
-            coins INTEGER,
-            strategy TEXT
-        )
-    ''')
     c.execute('DROP TABLE IF EXISTS price_history')
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS price_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            coin_price REAL
-        )
-    ''')
-    conn.commit()
-    st.sidebar.success('The game has been reset.')
-    st.rerun()  # Rerun the app to update the state
+    c.execute('DROP TABLE IF EXISTS coin_status')
+    init_db()
+    # Get the current datetime
+    current_time = datetime.now()
 
-# List of investors and their total assets in the sidebar
+    add_investor('Whale', 10000, 'strategy_1', adjusted_datetime(current_time, 4))
+    add_investor('Jono', 10000, 'strategy_1', adjusted_datetime(current_time, 3))
+    add_investor('Jacob', 1000, 'strategy_2', adjusted_datetime(current_time, 2))
+    add_investor('Gwyn', 1000, 'strategy_3', adjusted_datetime(current_time, 1))
+    add_investor('Axel', 1000, 'strategy_4', adjusted_datetime(current_time, 0))
+    st.sidebar.success('The game has been reset.')
+    st.rerun()
+
+# Investors Overview
 st.sidebar.header('Investors Overview')
 investors = get_investors()
 
-
-# Select investor
 st.sidebar.header('Select Investor')
 investor_names = {investor[0]: investor[1] for investor in investors}
-#selected_investor_id = st.sidebar.selectbox('Investor', list(investor_names.keys()), format_func=lambda x: investor_names[x])
-# Function to get the strategy function by name
-def get_strategy_function(strategy_name):
-    strategies = {
-        'strategy_1': strategy_1,
-        'strategy_2': strategy_2,
-        'strategy_3': strategy_3
-    }
-    return strategies.get(strategy_name)
+
+# if st.sidebar.button('Trading Day'):
+#     st.session_state.trading_started = True
+    #count = st_autorefresh(interval=5000, limit=10, key="investor_counter")
+    #st.sidebar.write(f"Current count: {count + 1}")
 
 
 
 
-# Update the previous coin price for the next iteration
-st.session_state.previous_coin_price = st.session_state.coin_price
+selected_investor = select_current_investor()
 
-# Function to get investor details, including the strategy
-def get_investor_details(investor_id):
-    c.execute('SELECT funds, coins, strategy FROM investors WHERE id = ?', (investor_id,))
-    return c.fetchone()
+st.session_state.selected_investor = selected_investor
+funds, coins, strategy = get_investor_details(selected_investor)
+investor_name = investor_names[selected_investor]
 
-# Button to start trading day
-if st.sidebar.button('Trading Day'):
-    st.session_state.trading_started = True
-
-# Only start the autorefresh if trading has started
-if st.session_state.get('trading_started', False):
-    count = st_autorefresh(interval=5000, limit=100, key="investor_counter")
-    st.sidebar.write(f"Current count: {count}")
-
-    selected_investor_id = (count % 4) + 1
-else:
-    selected_investor_id = 1
-
-st.session_state.selected_investor = selected_investor_id
-funds, coins, strategy = get_investor_details(selected_investor_id)
-investor_name = investor_names[selected_investor_id]
 price_history = get_price_history()
-
-if st.session_state.get('trading_started', False):
-
-
-    df = pd.DataFrame(price_history, columns=['transaction', 'coin_price'])
-    strategy_function = get_strategy_function(strategy)
-    if strategy_function:
-        instruction, proportion = strategy_function(df)
-        if instruction == 'buy':
-            num_coins_to_buy = int((proportion * funds) / st.session_state.coin_price)
-            if num_coins_to_buy > 0:
-                buy_coins(selected_investor_id, num_coins_to_buy)
-        elif instruction == 'sell':
-            num_coins_to_sell = int(proportion * coins)
-            if num_coins_to_sell > 0:
-                sell_coins(selected_investor_id, num_coins_to_sell)
-        else:
-            st.session_state.success_message = 'Hold: No action taken'
-
-
-    st.header('CensusCoin (CC) Overview')  
-    col1, col2 = st.columns(2)
-    col1.metric("Coin Volume", st.session_state.coin_volume)
-    # Calculate price change for the metric
-    price_change = st.session_state.coin_price - st.session_state.previous_coin_price
-    if price_change < 0:
-        price_delta = f"-${abs(price_change):.2f}"
+df = pd.DataFrame(price_history, columns=['transaction', 'coin_price'])
+strategy_function = get_strategy_function(strategy)
+if strategy_function:
+    instruction, proportion = strategy_function(df)
+    volume, price, previous_price = get_coin_status()
+    if instruction == 'buy':
+        message = buy_coins(selected_investor, int(proportion * funds / price), price)
+    elif instruction == 'sell':
+        message = sell_coins(selected_investor, int(proportion * coins), price)
     else:
-        price_delta = f"${price_change:.2f}"
+        log_price(price)
+        funds, coins, _ = get_investor_details(selected_investor)
+        update_investor(selected_investor, funds, coins)
+        message = 'Hold: No action taken'
+    st.session_state.success_message = message
 
+# Display metrics
+volume, price, previous_price = get_coin_status()
+st.header('Tulip Coin ($TC) Overview')
+col1, col2 = st.columns(2)
+col1.metric("Coin Volume", volume)
+price_change = price - previous_price
+price_delta = f"${price_change:.2f}" if price_change >= 0 else f"-${abs(price_change):.2f}"
+col2.metric("Current Price", f"${price:.2f}", price_delta)
+funds, coins, strategy = get_investor_details(selected_investor)
+st.header(f'Investor Overview: {investor_name}')
+st.write()
 
+col1, col2, col3 = st.columns(3)
+col1.metric("Investor Funds", f"${funds:.2f}")
+col2.metric("Investor Coins", coins)
+col3.metric("Total Assets", f"${funds + coins * price:.2f}")
 
-    col2.metric("Current Price", f"${st.session_state.coin_price:.2f}", price_delta)
+# if st.session_state.success_message:
+#     if st.session_state.success_message == 'Hold: No action taken':
+#         st.info(st.session_state.success_message)
+#     else:
+#         st.success(st.session_state.success_message)
+#     st.session_state.success_message = ""
 
-    funds, coins, strategy = get_investor_details(selected_investor_id)
-    st.header(f'Investor Overview: {investor_name}')
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Investor Funds", f"${funds:.2f}")
-    col2.metric("Investor coins", coins)
-    col3.metric("Total Assets", f"${funds + coins * st.session_state.coin_price:.2f}")
-
-    if st.session_state.success_message:
-        if st.session_state.success_message == 'Hold: No action taken':
-            st.info(st.session_state.success_message)
-        else:
-            st.success(st.session_state.success_message)
-        st.session_state.success_message = ""
-
-    st.divider()
+st.divider()
 
 for investor_id, investor_name in investors:
     funds, coins = get_investor_details(investor_id)[:2]
-    total_assets = funds + coins * st.session_state.coin_price
+    total_assets = funds + coins * price
     st.sidebar.write(f'{investor_name}: ${total_assets:.2f}')
 
-# Retrieve and plot coin price history
+# Coin Price History Plot
 price_history = get_price_history()
 if price_history:
     df = pd.DataFrame(price_history, columns=['transaction', 'coin_price'])
-
-    # Get the minimum and maximum coin prices
-    min_price = df['coin_price'].min()
-    max_price = df['coin_price'].max()
-    
+    min_price, max_price = df['coin_price'].min(), df['coin_price'].max()
     chart = alt.Chart(df).mark_line(point=True).encode(
         x=alt.X('transaction:Q', title='Transactions'),
         y=alt.Y('coin_price:Q', title='Coin Price', scale=alt.Scale(domain=[min_price, max_price]), axis=alt.Axis(format='$'))
@@ -332,3 +302,17 @@ if price_history:
 
 st.write('---')
 st.write('Note: Coin price is adjusted based on the transaction volume relative to available coins.')
+
+# Specify the timezone
+timezone = pytz.timezone('Australia/Sydney')
+
+# Get the current time in the specified timezone
+current_datetime = datetime.now(timezone)
+
+# Define the end time for 12:00 AM in the same timezone
+end_datetime = datetime(2024, 7, 19)
+
+# Check if the current time is before the end time
+#if current_datetime > end_datetime:
+time.sleep(5)
+st.rerun()
