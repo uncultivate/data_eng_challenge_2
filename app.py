@@ -5,7 +5,6 @@ import time
 import pytz
 import altair as alt
 import pandas as pd
-from streamlit_autorefresh import st_autorefresh
 
 # Database Initialization
 def init_db():
@@ -24,8 +23,7 @@ def init_db():
             name TEXT,
             funds REAL,
             coins INTEGER,
-            strategy TEXT,
-            timestamp TEXT
+            strategy TEXT
         )
     ''')
     c.execute('''
@@ -46,6 +44,7 @@ initial_coin_volume = 100000
 initial_coin_price = 0.1
 k = initial_coin_volume * initial_coin_price
 n_investors = 5
+finish_time = '22:39'
 
 # Function to log the price in the database
 def log_price(price):
@@ -69,14 +68,16 @@ if not get_coin_status():
     log_price(initial_coin_price)
 
 # Function to add a new investor
-def add_investor(name, funds, strategy, timestamp):
-    c.execute('INSERT INTO investors (name, funds, coins, strategy, timestamp) VALUES (?, ?, 0, ?, ?)', (name, funds, strategy, timestamp))
+def add_investor(name, funds, strategy):
+    c.execute('INSERT INTO investors (name, funds, coins, strategy) VALUES (?, ?, 0, ?)', (name, funds, strategy))
     conn.commit()
 
 # Function to get list of investors
 def get_investors():
-    c.execute('SELECT id, name FROM investors')
+    c.execute('SELECT id, name, funds, coins FROM investors')
     return c.fetchall()
+
+
 
 # Function to get investor details
 def get_investor_details(investor_id):
@@ -85,20 +86,13 @@ def get_investor_details(investor_id):
 
 # Function to update investor details
 def update_investor(investor_id, funds, coins):
-    timestamp = datetime.now()
-    c.execute('UPDATE investors SET funds = ?, coins = ?, timestamp = ? WHERE id = ?', (funds, coins, timestamp, investor_id))
+    c.execute('UPDATE investors SET funds = ?, coins = ?WHERE id = ?', (funds, coins, investor_id))
     conn.commit()
 
 # Function to select current investor
 def select_current_investor():
-    c.execute('SELECT id, timestamp FROM investors ORDER BY timestamp ASC')
-    result =  c.fetchone()
-    if result:
-        return result[0] # Extract the id value from the tuple
-    return None  # Handle case where no rows are returned
-
-def adjusted_datetime(dt, seconds):
-    return dt - timedelta(seconds=seconds)
+    c.execute('SELECT id FROM investors ORDER BY RANDOM()')
+    return c.fetchone()[0]
 
 # Functions to handle buying and selling of coins
 def buy_coins(investor_id, num_coins, current_price):
@@ -159,7 +153,7 @@ def strategy_1(df):
 
 def strategy_2(df):
     if len(df) < 2:
-        return 'sell', 0.5
+        return 'buy', 0.2
     last_price = df['coin_price'].iloc[-1]
     second_last_price = df['coin_price'].iloc[-2]
     price_change = (last_price - second_last_price) / second_last_price
@@ -167,7 +161,7 @@ def strategy_2(df):
         return 'sell', 0.5
     elif price_change < 0:
         return 'buy', 0.5
-    return 'hold', 0.0
+    return 'sell', 0.4
 
 def strategy_3(df):
     if len(df) < 5:
@@ -191,28 +185,11 @@ st.title('Challenge #2: Trading Day')
 # Sidebar Buttons
 
 
-if st.sidebar.button('Reset'):
-    c.execute('DROP TABLE IF EXISTS investors')
-    c.execute('DROP TABLE IF EXISTS price_history')
-    c.execute('DROP TABLE IF EXISTS coin_status')
-    init_db()
-    # Get the current datetime
-    current_time = datetime.now()
 
-    add_investor('Whale', 10000, 'strategy_1', adjusted_datetime(current_time, 4))
-    add_investor('Jono', 10000, 'strategy_1', adjusted_datetime(current_time, 3))
-    add_investor('Jacob', 1000, 'strategy_2', adjusted_datetime(current_time, 2))
-    add_investor('Gwyn', 1000, 'strategy_3', adjusted_datetime(current_time, 1))
-    add_investor('Axel', 1000, 'strategy_4', adjusted_datetime(current_time, 0))
-    st.sidebar.success('The game has been reset.')
-    st.rerun()
 
 # Investors Overview
 st.sidebar.header('Investors Overview')
-investors = get_investors()
 
-st.sidebar.header('Select Investor')
-investor_names = {investor[0]: investor[1] for investor in investors}
 
 # if st.sidebar.button('Trading Day'):
 #     st.session_state.trading_started = True
@@ -223,7 +200,9 @@ investor_names = {investor[0]: investor[1] for investor in investors}
 
 
 selected_investor = select_current_investor()
+investors = get_investors()
 
+investor_names = {investor[0]: investor[1] for investor in investors}
 st.session_state.selected_investor = selected_investor
 funds, coins, strategy = get_investor_details(selected_investor)
 investor_name = investor_names[selected_investor]
@@ -246,35 +225,48 @@ if strategy_function:
     st.session_state.success_message = message
 
 # Display metrics
+st.divider()
+
 volume, price, previous_price = get_coin_status()
-st.header('Tulip Coin ($TC) Overview')
-col1, col2 = st.columns(2)
-col1.metric("Coin Volume", volume)
+
+
+
+col1, col2, col3 = st.columns([1, 6, 3])
+col2.header('Tulip Coin ($TC)')
+col1.image('icon.png')
 price_change = price - previous_price
 price_delta = f"${price_change:.2f}" if price_change >= 0 else f"-${abs(price_change):.2f}"
-col2.metric("Current Price", f"${price:.2f}", price_delta)
+col3.metric("Current Price", f"${price:.2f}", price_delta, label_visibility='collapsed')
+#st.sidebar.metric("Coin Volume", volume)
 funds, coins, strategy = get_investor_details(selected_investor)
-st.header(f'Investor Overview: {investor_name}')
+st.subheader(f'Investor Overview: {investor_name}')
 st.write()
+
+
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Investor Funds", f"${funds:.2f}")
 col2.metric("Investor Coins", coins)
 col3.metric("Total Assets", f"${funds + coins * price:.2f}")
+investors = get_investors()
 
-# if st.session_state.success_message:
-#     if st.session_state.success_message == 'Hold: No action taken':
-#         st.info(st.session_state.success_message)
-#     else:
-#         st.success(st.session_state.success_message)
-#     st.session_state.success_message = ""
+df = pd.DataFrame(investors, columns=["ID", "Name", "funds", "coins"])
+# Calculate the total assets
+df['Total Assets'] = df['funds'] + df['coins'] * price
+# Format the 'total' column as currency
+df['Total Assets'] = df['Total Assets'].apply(lambda x: f"${x:.2f}")
+df = df[['Name','Total Assets']]
+st.sidebar.dataframe(df, hide_index=True)
+
+if st.session_state.success_message:
+    if st.session_state.success_message == 'Hold: No action taken':
+        st.info(st.session_state.success_message)
+    else:
+        st.success(st.session_state.success_message)
+    st.session_state.success_message = ""
 
 st.divider()
 
-for investor_id, investor_name in investors:
-    funds, coins = get_investor_details(investor_id)[:2]
-    total_assets = funds + coins * price
-    st.sidebar.write(f'{investor_name}: ${total_assets:.2f}')
 
 # Coin Price History Plot
 price_history = get_price_history()
@@ -303,16 +295,36 @@ if price_history:
 st.write('---')
 st.write('Note: Coin price is adjusted based on the transaction volume relative to available coins.')
 
+
+
+if st.sidebar.button('Reset'):
+    c.execute('DROP TABLE IF EXISTS investors')
+    c.execute('DROP TABLE IF EXISTS price_history')
+    c.execute('DROP TABLE IF EXISTS coin_status')
+    init_db()
+
+    add_investor('Whale', 10000, 'strategy_1')
+    add_investor('Jono', 10000, 'strategy_2')
+    add_investor('Jacob', 1000, 'strategy_2')
+    add_investor('Gwyn', 1000, 'strategy_3')
+    add_investor('Axel', 1000, 'strategy_4')
+    st.sidebar.success('The game has been reset.')
+    st.rerun()
+
 # Specify the timezone
 timezone = pytz.timezone('Australia/Sydney')
 
-# Get the current time in the specified timezone
-current_datetime = datetime.now(timezone)
+# Get the current time
+current_time = datetime.now().time()
 
-# Define the end time for 12:00 AM in the same timezone
-end_datetime = datetime(2024, 7, 19)
+# Define the time to compare (example: 3:30 PM)
+end_time = datetime.strptime(finish_time, '%H:%M').time()
 
-# Check if the current time is before the end time
-#if current_datetime > end_datetime:
-time.sleep(5)
-st.rerun()
+# Check if compare_time is earlier than the current time
+if end_time > current_time:
+
+    # Check if the current time is before the end time
+    #if current_datetime > end_datetime:
+    time.sleep(5)
+    st.rerun()
+
