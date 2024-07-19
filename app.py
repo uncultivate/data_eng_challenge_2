@@ -44,7 +44,7 @@ initial_coin_volume = 100000
 initial_coin_price = 0.1
 k = initial_coin_volume * initial_coin_price
 n_investors = 5
-finish_time = '22:39'
+finish_time = st.sidebar.text_input("End time")
 
 # Function to log the price in the database
 def log_price(price):
