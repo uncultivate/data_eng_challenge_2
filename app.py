@@ -103,7 +103,7 @@ def buy_coins(investor_id, num_coins, current_price):
         coins += num_coins
         volume, price, previous_price = get_coin_status()
         volume -= num_coins
-        new_price = k / volume  # y = k/x
+        new_price = k / max(volume, 1)  # y = k/x
         update_coin_status(volume, new_price, price)
         update_investor(investor_id, funds, coins)
         log_price(new_price)
@@ -118,7 +118,7 @@ def sell_coins(investor_id, num_coins, current_price):
         coins -= num_coins
         volume, price, previous_price = get_coin_status()
         volume += num_coins
-        new_price = k / volume  # y = k/x
+        new_price = k / max(1, volume)  # y = k/x
         update_coin_status(volume, new_price, price)
         update_investor(investor_id, funds, coins)
         log_price(new_price)
@@ -152,7 +152,7 @@ def strategy_1(df):
     return 'buy', 0.4
 
 def strategy_2(df):
-    if len(df) < 2:
+    if len(df) < 20:
         return 'buy', 0.2
     last_price = df['coin_price'].iloc[-1]
     second_last_price = df['coin_price'].iloc[-2]
@@ -283,8 +283,9 @@ if st.sidebar.button('Reset'):
     c.execute('DROP TABLE IF EXISTS coin_status')
     init_db()
 
-    add_investor('Whale', 10000, 'strategy_1')
-    add_investor('Jono', 10000, 'strategy_2')
+    add_investor('Whale', 20000, 'strategy_1')
+    add_investor('Orca', 20000, 'strategy_2')
+    add_investor('Narwhal', 10000, 'strategy_1')
     add_investor('Jacob', 1000, 'strategy_2')
     add_investor('Gwyn', 1000, 'strategy_3')
     add_investor('Axel', 1000, 'strategy_4')
