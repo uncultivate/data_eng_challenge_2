@@ -182,22 +182,8 @@ def strategy_4(df):
 # Main UI and Logic
 st.title('Challenge #2: Trading Day')
 
-# Sidebar Buttons
-
-
-
-
 # Investors Overview
 st.sidebar.header('Investors Overview')
-
-
-# if st.sidebar.button('Trading Day'):
-#     st.session_state.trading_started = True
-    #count = st_autorefresh(interval=5000, limit=10, key="investor_counter")
-    #st.sidebar.write(f"Current count: {count + 1}")
-
-
-
 
 selected_investor = select_current_investor()
 investors = get_investors()
@@ -229,8 +215,6 @@ st.divider()
 
 volume, price, previous_price = get_coin_status()
 
-
-
 col1, col2, col3 = st.columns([1, 6, 3])
 col2.header('Tulip Coin ($TC)')
 col1.image('icon.png')
@@ -240,9 +224,6 @@ col3.metric("Current Price", f"${price:.2f}", price_delta, label_visibility='col
 #st.sidebar.metric("Coin Volume", volume)
 funds, coins, strategy = get_investor_details(selected_investor)
 st.subheader(f'Investor Overview: {investor_name}')
-st.write()
-
-
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Investor Funds", f"${funds:.2f}")
@@ -266,7 +247,6 @@ if st.session_state.success_message:
     st.session_state.success_message = ""
 
 st.divider()
-
 
 # Coin Price History Plot
 price_history = get_price_history()
@@ -295,8 +275,6 @@ if price_history:
 st.write('---')
 st.write('Note: Coin price is adjusted based on the transaction volume relative to available coins.')
 
-
-
 if st.sidebar.button('Reset'):
     c.execute('DROP TABLE IF EXISTS investors')
     c.execute('DROP TABLE IF EXISTS price_history')
@@ -315,7 +293,8 @@ if st.sidebar.button('Reset'):
 timezone = pytz.timezone('Australia/Sydney')
 
 # Get the current time
-current_time = datetime.now().time()
+now = datetime.now(timezone)
+current_time = now.time()
 
 # Define the time to compare (example: 3:30 PM)
 end_time = datetime.strptime(finish_time, '%H:%M').time()
