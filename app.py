@@ -292,21 +292,22 @@ if st.sidebar.button('Reset'):
     st.sidebar.success('The game has been reset.')
     st.rerun()
 
-# Specify the timezone
-timezone = pytz.timezone('Australia/Sydney')
+if finish_time:
+    # Specify the timezone
+    timezone = pytz.timezone('Australia/Sydney')
 
-# Get the current time
-now = datetime.now(timezone)
-current_time = now.time()
+    # Get the current time
+    now = datetime.now(timezone)
+    current_time = now.time()
 
-# Define the time to compare (example: 3:30 PM)
-end_time = datetime.strptime(finish_time, '%H:%M').time()
+    # Define the time to compare (example: 3:30 PM)
+    end_time = datetime.strptime(finish_time, '%H:%M').time()
 
-# Check if compare_time is earlier than the current time
-if end_time > current_time:
+    # Check if compare_time is earlier than the current time
+    if end_time > current_time:
 
-    # Check if the current time is before the end time
-    #if current_datetime > end_datetime:
-    time.sleep(5)
-    st.rerun()
+        # Check if the current time is before the end time
+        #if current_datetime > end_datetime:
+        time.sleep(5)
+        st.rerun()
 
