@@ -16,8 +16,8 @@ Step right up and plant the seeds of your success with Tulip Coin! Who wouldn't 
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/tulip-coin-trading-app.git
-    cd tulip-coin-trading-app
+    git clone https://github.com/uncultivate/data_eng_challenge_2.git
+    cd data_eng_challenge_2
     ```
 
 2. Install the required packages:
