@@ -41,8 +41,8 @@ conn, c = init_db()
 
 # Initial settings
 initial_coin_volume = 100000
-initial_coin_price = 0.1
-k = initial_coin_volume * initial_coin_price
+initial_coin_price = 0.09
+k = 50000
 n_investors = 5
 finish_time = st.sidebar.text_input("End time")
 
@@ -103,7 +103,10 @@ def buy_coins(investor_id, num_coins, current_price):
         coins += num_coins
         volume, price, previous_price = get_coin_status()
         volume -= num_coins
-        new_price = k / max(volume, 1)  # y = k/x
+        if volume <= 0:
+            return 'Hold: No action taken'
+        
+        new_price = k / (volume / 250)**2.2  # y = k/x^2
         update_coin_status(volume, new_price, price)
         update_investor(investor_id, funds, coins)
         log_price(new_price)
@@ -118,7 +121,7 @@ def sell_coins(investor_id, num_coins, current_price):
         coins -= num_coins
         volume, price, previous_price = get_coin_status()
         volume += num_coins
-        new_price = k / max(1, volume)  # y = k/x
+        new_price = k / (volume / 250)**2.2  # y = k/x^2
         update_coin_status(volume, new_price, price)
         update_investor(investor_id, funds, coins)
         log_price(new_price)
@@ -214,7 +217,7 @@ if strategy_function:
 st.divider()
 
 volume, price, previous_price = get_coin_status()
-
+st.sidebar.write(f"Current coin volume: {volume}")
 col1, col2, col3 = st.columns([1, 6, 3])
 col2.header('Tulip Coin ($TC)')
 col1.image('icon.png')
@@ -234,6 +237,7 @@ investors = get_investors()
 df = pd.DataFrame(investors, columns=["ID", "Name", "funds", "coins"])
 # Calculate the total assets
 df['Total Assets'] = df['funds'] + df['coins'] * price
+df = df.sort_values(by='Total Assets', ascending=False)
 # Format the 'total' column as currency
 df['Total Assets'] = df['Total Assets'].apply(lambda x: f"${x:.2f}")
 df = df[['Name','Total Assets']]
@@ -292,21 +296,44 @@ if st.sidebar.button('Reset'):
     st.sidebar.success('The game has been reset.')
     st.rerun()
 
-# Specify the timezone
-timezone = pytz.timezone('Australia/Sydney')
+if finish_time:
+    # Specify the timezone
+    timezone = pytz.timezone('Australia/Sydney')
 
-# Get the current time
-now = datetime.now(timezone)
-current_time = now.time()
+    # Get the current time
+    now = datetime.now(timezone)
+    current_time = now.time()
 
-# Define the time to compare (example: 3:30 PM)
-end_time = datetime.strptime(finish_time, '%H:%M').time()
+    # Define the time to compare (example: 3:30 PM)
+    end_time = datetime.strptime(finish_time, '%H:%M').time()
 
-# Check if compare_time is earlier than the current time
-if end_time > current_time:
+    # Function to calculate time remaining
+    def time_remaining(current_time, end_time):
+        current_datetime = datetime.combine(datetime.today(), current_time)
+        end_datetime = datetime.combine(datetime.today(), end_time)
+        
+        # If end time is less than current time, assume it's for the next day
+        if end_datetime < current_datetime:
+            return 'Trading day ended'
+            
+        remaining_time = end_datetime - current_datetime
+        # Extract hours, minutes, and seconds from the remaining time
+        hours, remainder = divmod(remaining_time.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        # Format the remaining time as a string
+        remaining_time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
+        return f"Time remaining: {remaining_time_str}"
 
-    # Check if the current time is before the end time
-    #if current_datetime > end_datetime:
-    time.sleep(5)
-    st.rerun()
+
+    # Calculate and display the time remaining
+    remaining_time = time_remaining(current_time, end_time)
+    st.sidebar.write(remaining_time)
+
+    # Check if compare_time is earlier than the current time
+    if end_time > current_time:
+
+        # Check if the current time is before the end time
+        #if current_datetime > end_datetime:
+        time.sleep(5)
+        st.rerun()
 
