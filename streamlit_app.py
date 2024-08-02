@@ -87,7 +87,8 @@ if coin_status:
 # Display price history chart
 price_history = fetch_price_history()
 if price_history:
-    df = pd.DataFrame(price_history, columns=['transaction', 'timestamp', 'coin_price', 'name', 'coins', 'funds'])
+    df = pd.DataFrame(price_history, columns=['transaction', 'timestamp', 'coin_price', 'name', 'coins', 'funds', 'type'])
+    # Add a new column for index + 1
     min_price, max_price = df['coin_price'].min(), df['coin_price'].max()
     chart = alt.Chart(df).mark_line(point=True).encode(
         x=alt.X('transaction:Q', title='Transactions'),
@@ -120,28 +121,38 @@ if price_history:
     df['timestamp'] = df['timestamp'].dt.tz_convert('Australia/Sydney')
 
     # Extract the time component
-    df['time'] = df['timestamp'].dt.time
+    df['time'] = df['timestamp'].dt.strftime('%H:%M:%S')
 
     # Select and rename columns
-    orderbook_df = df[['time', 'name', 'coins', 'previous_price', 'funds']].rename(
+    orderbook_df = df[['time', 'name', 'coins', 'previous_price', 'funds', 'type']].rename(
         columns={
             'time': 'Time',
             'name': 'Name',
             'coins': 'Amount',
             'previous_price': 'Price',
-            'funds': 'Total'
+            'funds': 'Total',
+            'type': 'Type',
         }
     ).sort_values(by='Time', ascending=False).tail(100)
+
+    def highlight_type(s):
+        if s.Type =='buy':
+            return ['background-color: #01421d']*len(s)
+        elif s.Type == 'sell':
+            return ['background-color: #3d0003']*len(s)
+        else:
+            return [''] * len(s)  # Return a list of empty styles if no condition is met
+
 
     # Format the 'Previous_Price' and 'Total' columns as currency
     orderbook_df['Price'] = orderbook_df['Price'].apply(lambda x: f"${x:,.2f}" if pd.notnull(x) else "N/A")
     orderbook_df['Total'] = orderbook_df['Total'].apply(lambda x: f"${x:,.2f}")
-    orderbook_df = orderbook_df.iloc[0:-1]                  
+    orderbook_df = orderbook_df.iloc[0:-1]
+    orderbook_df = orderbook_df.style.apply(highlight_type, axis=1)              
     st.dataframe(orderbook_df, hide_index=True, use_container_width=True)
 
 # Investors Overview
 if coin_status:
-
     investors = fetch_investor_deets()
     df = pd.DataFrame(investors, columns=["ID", "Name", "funds", "coins", "strategy"])
     # Calculate the total assets
