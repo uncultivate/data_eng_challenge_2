@@ -127,13 +127,14 @@ if price_history:
     orderbook_df = df[['time', 'name', 'coins', 'previous_price', 'funds', 'type']].rename(
         columns={
             'time': 'Time',
+            'type': 'Type',
             'name': 'Name',
             'coins': 'Amount',
             'previous_price': 'Price',
             'funds': 'Total',
-            'type': 'Type',
+
         }
-    ).sort_values(by='Time', ascending=False).tail(100)
+    ).sort_values(by='Time', ascending=False).tail(100)[['Time', 'Name', 'Type', 'Amount', 'Price', 'Total']]
 
     def highlight_type(s):
         if s.Type =='buy':
@@ -148,7 +149,7 @@ if price_history:
     orderbook_df['Price'] = orderbook_df['Price'].apply(lambda x: f"${x:,.2f}" if pd.notnull(x) else "N/A")
     orderbook_df['Total'] = orderbook_df['Total'].apply(lambda x: f"${x:,.2f}")
     orderbook_df = orderbook_df.iloc[0:-1]
-    orderbook_df = orderbook_df.style.apply(highlight_type, axis=1)              
+    orderbook_df = orderbook_df.style.apply(highlight_type, axis=1)         
     st.dataframe(orderbook_df, hide_index=True, use_container_width=True)
 
 # Investors Overview
