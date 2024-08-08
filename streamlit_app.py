@@ -172,7 +172,7 @@ if coin_status:
             <tr>
                 <th style='text-align:center;'>Coins</th>
                 <th style='text-align:center;'>Funds</th>
-                <th style='text-align:center;'>Total Assets</th>
+                <th style='text-align:center;'>Total</th>
             </tr>
             <tr>
                 <td style='text-align:center;'>{row['Coins']}</td>
