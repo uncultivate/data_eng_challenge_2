@@ -59,6 +59,11 @@
             "name": "Jacob Van Der Beurze",
             "funds": 1000,
             "strategy": "def jacob_van_der_beurze(history):\n        if len(history) >= 10:\n            recent_history = history.tail(10)\n            \n            # Calculate change\n            initial_price = recent_history.iloc[0]['price_history']\n            latest_price = recent_history.iloc[-1]['price_history']\n            price_change = (latest_price - initial_price) / initial_price\n            \n            if price_change >= 1.0:\n                # Sell 20% of coins if price has increased by 100% or more\n                return 'sell', 0.2\n            elif price_change <= -4.0:\n                # Buy with 100% of money if price has decreased by 400% or more\n                return 'buy', 1.0\n    \n        # Default is hold\n        return 'hold', 0.0"
+        },
+        {
+            "name": "Window of Opportunity",
+            "funds": 1000,
+            "strategy": "def moving_average_tf(history):\n        short_window = 5\n        long_window = 10\n    \n        if len(history) < long_window:\n            return ('hold', 0.0)\n    \n        history['short_mavg'] = history['price_history'].rolling(window=short_window, min_periods=1).mean()\n        history['long_mavg'] = history['price_history'].rolling(window=long_window, min_periods=1).mean()\n    \n        short_mavg = history['short_mavg'].iloc[-1]\n        long_mavg = history['long_mavg'].iloc[-1]\n        minutes_remaining = history['minutes_remaining'].iloc[-1]\n    \n        if minutes_remaining > 2400:\n            proportion = 0.2\n        elif 1200 < minutes_remaining <= 2400:\n            proportion = 0.5\n        else:\n            proportion = 0.8\n    \n        if short_mavg > long_mavg:\n            return ('buy', proportion)\n        elif short_mavg < long_mavg:\n            return ('sell', proportion)\n        else:\n            return ('hold', 0.0)"
         }
     ]
 }
