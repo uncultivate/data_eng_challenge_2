@@ -3,17 +3,17 @@
         {
             "name": "Minke",
             "funds": 10000,
-            "strategy": "def strategy_1(df):\n        if len(df) <= 20:\n            return 'buy', 0.2\n        elif len(df) <= 40:\n            return 'sell', 0.8\n        \n        elif df['minutes_remaining'].iloc[-1] < 9:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
+            "strategy": "def strategy_1(df):\n        if len(df) <= 20:\n            return 'buy', 0.2\n        elif len(df) <= 40:\n            return 'sell', 0.8\n        elif df['minutes_remaining'].iloc[-1] == 18:\n            return 'sell', 0.9\n        elif df['minutes_remaining'].iloc[-1] == 17:\n            return 'buy', 1\n        \n        elif df['minutes_remaining'].iloc[-1] < 9:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
         },
         {
             "name": "Humpback",
             "funds": 15000,
-            "strategy": "def strategy_1(df):\n        if len(df) < 5:\n            return 'buy', 0.3\n        elif df['minutes_remaining'].iloc[-1] < 8:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
+            "strategy": "def strategy_1(df):\n        if len(df) < 5:\n            return 'buy', 0.3\n        elif df['minutes_remaining'].iloc[-1] == 16:\n            return 'sell', 0.9\n        elif df['minutes_remaining'].iloc[-1] == 15:\n            return 'buy', 1\n        elif df['minutes_remaining'].iloc[-1] < 8:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
         },
         {
             "name": "Moby Dick",
             "funds": 20000,
-            "strategy": "def strategy_1(df):\n        if len(df) < 5:\n            return 'buy', 0.2\n        elif df['minutes_remaining'].iloc[-1] < 7:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
+            "strategy": "def strategy_1(df):\n        if len(df) < 5:\n            return 'buy', 0.2\n        elif df['minutes_remaining'].iloc[-1] == 14:\n            return 'sell', 0.9\n        elif df['minutes_remaining'].iloc[-1] == 13:\n            return 'buy', 1\n        elif df['minutes_remaining'].iloc[-1] < 7:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
         },
         {
             "name": "noisy boi",
@@ -64,6 +64,11 @@
             "name": "Window of Opportunity",
             "funds": 1000,
             "strategy": "def moving_average_tf(history):\n        short_window = 5\n        long_window = 10\n    \n        if len(history) < long_window:\n            return ('hold', 0.0)\n    \n        history['short_mavg'] = history['price_history'].rolling(window=short_window, min_periods=1).mean()\n        history['long_mavg'] = history['price_history'].rolling(window=long_window, min_periods=1).mean()\n    \n        short_mavg = history['short_mavg'].iloc[-1]\n        long_mavg = history['long_mavg'].iloc[-1]\n        minutes_remaining = history['minutes_remaining'].iloc[-1]\n    \n        if minutes_remaining > 2400:\n            proportion = 0.2\n        elif 1200 < minutes_remaining <= 2400:\n            proportion = 0.5\n        else:\n            proportion = 0.8\n    \n        if short_mavg > long_mavg:\n            return ('buy', proportion)\n        elif short_mavg < long_mavg:\n            return ('sell', proportion)\n        else:\n            return ('hold', 0.0)"
+        },
+        {
+            "name": "Dogecoin_Speculator",
+            "funds": 1000,
+            "strategy": "def invest_o_matic(history):\n\n          min_turn_interval = 40\n        \n          import pandas as pd\n          import numpy as np\n        \n          if history.empty:\n        \n            decision = 'buy'\n            invest_ratio = 1.0\n        \n          else:\n        \n            turns=history['transaction'].values[-1]\n            current_price=history['price_history'].values[-1]\n        \n        \n            if turns <= 10 or turns >= 719:\n              decision = 'buy'\n              invest_ratio = 1.0\n        \n        \n            elif min_turn_interval >= (720 - turns):\n              decision = 'sell'\n              invest_ratio = 1.0\n        \n        \n            else:\n              cf = np.polyfit(history['transaction'],history['price_history'],2)\n              poly_function = np.poly1d(cf)\n        \n              x_value_to_predict = turns + min_turn_interval\n              predicted_price = poly_function(x_value_to_predict)\n        \n              predicted_growth = predicted_price / current_price\n        \n              if predicted_growth > 1:\n        \n                decision = 'buy'\n                invest_ratio = (predicted_price - current_price) / predicted_price\n        \n              elif predicted_growth < 1:\n        \n                decision = 'sell'\n                invest_ratio = 1.0\n        \n              else:\n        \n                decision = 'hold'\n                invest_ratio = 0.0\n        \n          return decision, invest_ratio"
         }
     ]
 }
