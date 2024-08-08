@@ -158,13 +158,16 @@ if coin_status:
     df = pd.DataFrame(investors, columns=["ID", "Name", "Funds", "Coins", "strategy"])
     # Calculate the total assets
     df['Total Assets'] = df['Funds'] + df['Coins'] * price
-    df = df.sort_values(by='Total Assets', ascending=False)
+    df = df.sort_values(by='Total Assets', ascending=False).reset_index(drop=True)
     # Format the 'total' column as currency
     df['Total Assets'] = df['Total Assets'].apply(lambda x: f"${x:.2f}")
     df_sum = df[['Name','Total Assets']]
     st.sidebar.dataframe(df_sum, hide_index=True, use_container_width=True)
     for index, row in df.iterrows():
-        st.sidebar.write(f"{index}: {row['Name']}")
-        st.sidebar.write(f"Coins': {row['Coins']}")
-        st.sidebar.write(f"Funds': {row['Funds']}")
-        st.sidebar.write(f"Total': {row['Total Assets']}")
+        # Make the first line bold
+        st.sidebar.markdown(f"**{index + 1}: {row['Name']}**")
+        
+        # Reduce the text size for the next three lines to 3/4 size
+        st.sidebar.markdown(f"<div style='font-size:75%;'>Coins: {row['Coins']}</div>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<div style='font-size:75%;'>Funds: {row['Funds']}</div>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<div style='font-size:75%;'>Total: {row['Total Assets']}</div>", unsafe_allow_html=True)
