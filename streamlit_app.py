@@ -50,9 +50,6 @@ def fetch_end_time():
         return []
 
 # Main UI and Logic
-st.title('Challenge #2: Trading Day')
-st.divider()
-
 end_time = fetch_end_time()
 end_time = datetime.strptime(end_time, "%a, %d %b %Y %H:%M:%S %Z")
 now = datetime.now()
