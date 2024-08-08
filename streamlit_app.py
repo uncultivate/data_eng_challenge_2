@@ -166,13 +166,10 @@ if coin_status:
     for index, row in df.iterrows():
     # Make the first line bold
         st.sidebar.markdown(f"**{index + 1}: {row['Name']}**")
-        # Format 'Funds' and 'Total Assets' as currency
-        formatted_funds = f"${row['Funds']:,.2f}"
-        formatted_total_assets = f"${row['Total Assets']:,.2f}"
         
-        # Insert the values into a one-line table
+        # Insert the second group of values into a one-line table
         st.sidebar.markdown(f"""
         | **Coins** | **Funds** | **Total Assets** |
         |:---------:|:---------:|:---------------:|
-        | {row['Coins']} | {formatted_funds} | {formatted_total_assets} |
+        | {row['Coins']} | {row['Funds']} | {row['Total Assets']} |
         """)
