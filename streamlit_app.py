@@ -6,6 +6,11 @@ import altair as alt
 import pytz
 from datetime import datetime
 
+st.set_page_config(
+    page_title="Tulip Coin",
+    page_icon="🌷",
+)
+
 # Set the backend API endpoint
 BACKEND_API_URL = 'http://13.236.135.206:5000'
 
