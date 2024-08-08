@@ -169,7 +169,7 @@ if coin_status:
         
         # Insert the second group of values into a one-line table
         st.sidebar.markdown(f"""
-        | **Coins** | **Funds** | **Total Assets** |
+        | **Coins** | **Funds** | **Total** |
         |:---------:|:---------:|:---------------:|
-        | {row['Coins']} | ${row['Funds']:.2f} | {row['Total']} |
+        | {row['Coins']} | ${row['Funds']:.2f} | {row['Total Assets']} |
         """)
