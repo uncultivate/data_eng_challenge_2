@@ -152,14 +152,19 @@ if price_history:
     orderbook_df = orderbook_df.style.apply(highlight_type, axis=1)         
     st.dataframe(orderbook_df, hide_index=True, use_container_width=True)
 
-# Investors Overview
+# Investors Leaderboard
 if coin_status:
     investors = fetch_investor_deets()
-    df = pd.DataFrame(investors, columns=["ID", "Name", "funds", "coins", "strategy"])
+    df = pd.DataFrame(investors, columns=["ID", "Name", "Funds", "Coins", "strategy"])
     # Calculate the total assets
-    df['Total Assets'] = df['funds'] + df['coins'] * price
+    df['Total Assets'] = df['Funds'] + df['Coins'] * price
     df = df.sort_values(by='Total Assets', ascending=False)
     # Format the 'total' column as currency
     df['Total Assets'] = df['Total Assets'].apply(lambda x: f"${x:.2f}")
     df = df[['Name','Total Assets']]
     st.sidebar.dataframe(df, hide_index=True, use_container_width=True)
+    for index, row in df.iterrows():
+        st.sidebar.write(f"{index}: {row['Name']}")
+        st.sidebar.write(f"Coins': {row['Coins']}")
+        st.sidebar.write(f"Funds': {row['Funds']}")
+        st.sidebar.write(f"Total': {row['Total Assets']}")
