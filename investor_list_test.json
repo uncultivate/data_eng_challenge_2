@@ -8,12 +8,12 @@
         {
             "name": "Humpback",
             "funds": 15000,
-            "strategy": "def strategy_1(df):\n        if len(df) < 5:\n            return 'buy', 0.5\n        elif df['minutes_remaining'].iloc[-1] < 8:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
+            "strategy": "def strategy_1(df):\n        if len(df) < 5:\n            return 'buy', 0.3\n        elif df['minutes_remaining'].iloc[-1] < 8:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
         },
         {
             "name": "Moby Dick",
             "funds": 20000,
-            "strategy": "def strategy_1(df):\n        if len(df) < 5:\n            return 'buy', 0.5\n        elif df['minutes_remaining'].iloc[-1] < 7:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
+            "strategy": "def strategy_1(df):\n        if len(df) < 5:\n            return 'buy', 0.2\n        elif df['minutes_remaining'].iloc[-1] < 7:\n            return 'sell', 0.7\n        elif len(df) %2 == 0:\n            return 'buy', 0.2\n        elif len(df) %2 == 1:\n            return 'sell', 0.1\n        return 'buy', 0.1"
         },
         {
             "name": "noisy boi",
