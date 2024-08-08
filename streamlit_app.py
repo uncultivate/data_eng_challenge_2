@@ -160,7 +160,6 @@ if coin_status:
     df['Total Assets'] = df['Funds'] + df['Coins'] * price
     df = df.sort_values(by='Total Assets', ascending=False).reset_index(drop=True)
     # Format the 'total' column as currency
-    df['Total Assets'] = df['Total Assets'].apply(lambda x: f"${x:.2f}")
     df_sum = df[['Name','Total Assets']]
     st.sidebar.dataframe(df_sum, hide_index=True, use_container_width=True)
     for index, row in df.iterrows():
