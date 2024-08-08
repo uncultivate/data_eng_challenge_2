@@ -159,9 +159,6 @@ if coin_status:
     # Calculate the total assets
     df['Total Assets'] = df['Funds'] + df['Coins'] * price
     df = df.sort_values(by='Total Assets', ascending=False).reset_index(drop=True)
-    # Format the 'total' column as currency
-    df_sum = df[['Name','Total Assets']]
-    st.sidebar.dataframe(df_sum, hide_index=True, use_container_width=True)
     for index, row in df.iterrows():
     # Make the first line bold
         st.sidebar.markdown(f"**{index + 1}: {row['Name']}**")
@@ -171,7 +168,7 @@ if coin_status:
         
         # Insert the values into a one-line table with 75% font size
         st.sidebar.markdown(f"""
-        <table style='font-size:75%;'>
+        <table style='font-size:85%;'>
             <tr>
                 <th style='text-align:center;'>Coins</th>
                 <th style='text-align:center;'>Funds</th>
