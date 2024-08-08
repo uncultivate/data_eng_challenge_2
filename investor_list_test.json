@@ -18,7 +18,7 @@
         {
             "name": "noisy boi",
             "funds": 1000,
-            "strategy": "\"def my_strategy(history):\n        from random import choice, random \n        return (choice(['buy','sell','hold']),random())"
+            "strategy": "def my_strategy(history):\n        from random import choice, random \n        return (choice(['buy','sell','hold']),random())"
         },
         {
             "name": "stick_in_the_mud",
