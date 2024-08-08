@@ -164,10 +164,12 @@ if coin_status:
     df_sum = df[['Name','Total Assets']]
     st.sidebar.dataframe(df_sum, hide_index=True, use_container_width=True)
     for index, row in df.iterrows():
-        # Make the first line bold
+    # Make the first line bold
         st.sidebar.markdown(f"**{index + 1}: {row['Name']}**")
         
-        # Reduce the text size for the next three lines to 3/4 size
-        st.sidebar.markdown(f"<div style='font-size:75%;'>Coins: {row['Coins']}</div>", unsafe_allow_html=True)
-        st.sidebar.markdown(f"<div style='font-size:75%;'>Funds: {row['Funds']}</div>", unsafe_allow_html=True)
-        st.sidebar.markdown(f"<div style='font-size:75%;'>Total: {row['Total Assets']}</div>", unsafe_allow_html=True)
+        # Insert the second group of values into a one-line table
+        st.sidebar.markdown(f"""
+        | **Coins** | **Funds** | **Total Assets** |
+        |:---------:|:---------:|:---------------:|
+        | {row['Coins']} | {row['Funds']} | {row['Total Assets']} |
+        """)
