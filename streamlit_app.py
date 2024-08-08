@@ -171,5 +171,5 @@ if coin_status:
         st.sidebar.markdown(f"""
         | **Coins** | **Funds** | **Total Assets** |
         |:---------:|:---------:|:---------------:|
-        | {row['Coins']} | ${row['Funds']:.2f} | {row['Total Assets']} |
+        | {row['Coins']} | ${row['Funds']:.2f} | {row['Total']} |
         """)
