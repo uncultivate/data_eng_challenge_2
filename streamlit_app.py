@@ -66,7 +66,11 @@ converted_current = now.astimezone(target_tz)
 st.sidebar.write(f"End time: {converted_end_time.time()} AEST")
 auto_refresh = converted_current < converted_end_time
 if auto_refresh:
-    count = st_autorefresh(interval=5000, limit=100)
+    count = st_autorefresh(interval=5000, limit=720)
+else:
+    st.title('Tulip Coin Trading Ended')
+    st.divider()
+
 
 
 
