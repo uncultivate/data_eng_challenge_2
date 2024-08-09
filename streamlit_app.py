@@ -70,7 +70,7 @@ target_time = time(15, 0, 0)  # 15:00:00 is 3 PM
 if converted_current.time() < target_time:
     col1, col2 = st.columns(2)
     with col1:
-        st.title('Tulip Coin Market Opening at 3 PM')
+        st.header('Tulip Coin Market Opening at 3 PM')
     with col2:
         st.image('tulip_coin.jpg')
 else:
