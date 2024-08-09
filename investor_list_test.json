@@ -58,7 +58,7 @@
         {
             "name": "Jacob Van Der Beurze",
             "funds": 1000,
-            "strategy": "def jacob_van_der_beurze(history):\n        if len(history) >= 10:\n            recent_history = history.tail(10)\n            \n            # Calculate change\n            initial_price = recent_history.iloc[0]['price_history']\n            latest_price = recent_history.iloc[-1]['price_history']\n            price_change = (latest_price - initial_price) / initial_price\n            \n            if price_change >= 0.2:\n                # Sell 20% of coins if price has increased by 20% or more\n                return 'sell', 0.2\n            elif price_change <= -0.2 and df['minutes_remaining'].iloc[-1] > 10:\n                # Buy with 100% of money if price has decreased by 400% or more\n                return 'buy', 0.2\n    \n        # Default is hold\n        return 'hold', 0.0"
+            "strategy": "def jacob_van_der_beurze(history):\n        if len(history) >= 10:\n            #recent_history = history.tail(10)\n            \n            # Calculate change\n            #initial_price = recent_history.iloc[0]['price_history']\n            #latest_price = recent_history.iloc[-1]['price_history']\n            #price_change = (latest_price - initial_price) / initial_price\n            \n            if (history['price_history'].iloc[-1] < history['price_history'].iloc[-11]) :\n                return 'buy', 0.2\n            elif (history['price_history'].iloc[-1] > history['price_history'].iloc[-11]) :\n                return 'sell', 0.2\n    \n        # Default is hold\n        return 'hold', 0.0"
         },
         {
             "name": "Window of Opportunity",
