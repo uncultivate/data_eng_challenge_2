@@ -50,21 +50,14 @@ def fetch_end_time():
         return []
 
 # Main UI and Logic
-end_time = fetch_end_time()
-end_time = datetime.strptime(end_time, "%a, %d %b %Y %H:%M:%S %Z")
+
 now = datetime.now()
-
-# Set the timezone for the original datetime
-original_tz = pytz.timezone('GMT') 
-localized_end_time = original_tz.localize(end_time)
-
 # Convert to a different timezone
 target_tz = pytz.timezone('Australia/Sydney')
-converted_end_time = localized_end_time.astimezone(target_tz)
 converted_current = now.astimezone(target_tz)
 
 # Define 3 PM in AEST
-target_time = time(16, 0, 0)  # 15:00:00 is 3 PM
+target_time = time(15, 0, 0)  # 15:00:00 is 3 PM
 
 # Check if the current time is before or after 3 PM
 if converted_current.time() < target_time:
@@ -74,6 +67,20 @@ if converted_current.time() < target_time:
     with col2:
         st.image('tulip_coin.jpg')
 else:
+
+
+    end_time = fetch_end_time()
+    end_time = datetime.strptime(end_time, "%a, %d %b %Y %H:%M:%S %Z")
+
+    # Set the timezone for the original datetime
+    original_tz = pytz.timezone('GMT') 
+    localized_end_time = original_tz.localize(end_time)
+
+
+    converted_end_time = localized_end_time.astimezone(target_tz)
+
+
+
 
     st.sidebar.write(f"End time: {converted_end_time.time()} AEST")
     auto_refresh = converted_current < converted_end_time
