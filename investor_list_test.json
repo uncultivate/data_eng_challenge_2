@@ -69,6 +69,11 @@
             "name": "Dogecoin_Speculator",
             "funds": 1000,
             "strategy": "def invest_o_matic(history):\n\n    min_turn_interval = 40\n    \n    import pandas as pd\n    import numpy as np\n    \n    if history.empty:\n        \n        decision = 'buy'\n        invest_ratio = 1.0\n    \n    else:\n        \n        turns = history['transaction'].values[-1]\n        current_price = history['price_history'].values[-1]\n        \n        if turns <= 10 or turns >= 719:\n            decision = 'buy'\n            invest_ratio = 1.0\n        \n        elif min_turn_interval >= (720 - turns):\n            decision = 'sell'\n            invest_ratio = 1.0\n        \n        else:\n            cf = np.polyfit(history['transaction'], history['price_history'], 2)\n            poly_function = np.poly1d(cf)\n            \n            x_value_to_predict = turns + min_turn_interval\n            predicted_price = poly_function(x_value_to_predict)\n            \n            predicted_growth = predicted_price / current_price\n            \n            if predicted_growth > 1:\n                decision = 'buy'\n                invest_ratio = (predicted_price - current_price) / predicted_price\n            elif predicted_growth < 1:\n                decision = 'sell'\n                invest_ratio = 1.0\n            else:\n                decision = 'hold'\n                invest_ratio = 0.0\n        \n    return decision, invest_ratio"
+        },
+        {
+            "name": "Gecko",
+            "funds": 1000,
+            "strategy": "def gecko(history):\n        if not history.empty:\n            if df['minutes_remaining'].iloc[-1] < 7:\n                return 'sell', 1\n        else:\n            return 'buy', 0.5"
         }
     ]
 }

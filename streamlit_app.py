@@ -64,7 +64,7 @@ converted_end_time = localized_end_time.astimezone(target_tz)
 converted_current = now.astimezone(target_tz)
 
 # Define 3 PM in AEST
-target_time = time(13, 0, 0)  # 15:00:00 is 3 PM
+target_time = time(15, 0, 0)  # 15:00:00 is 3 PM
 
 # Check if the current time is before or after 3 PM
 if converted_current.time() < target_time:
