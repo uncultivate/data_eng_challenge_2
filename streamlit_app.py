@@ -139,7 +139,7 @@ if price_history:
             'funds': 'Total',
 
         }
-    ).sort_values(by='Time', ascending=False).tail(100)[['Time', 'Name', 'Type', 'Amount', 'Price', 'Total']]
+    ).sort_values(by='Time', ascending=False)[['Time', 'Name', 'Type', 'Amount', 'Price', 'Total']]
 
     def highlight_type(s):
         if s.Type =='buy':
