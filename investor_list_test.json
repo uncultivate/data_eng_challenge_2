@@ -73,7 +73,7 @@
         {
             "name": "Gecko",
             "funds": 1000,
-            "strategy": "def gecko(history):\n        if not history.empty:\n            if df['minutes_remaining'].iloc[-1] < 7:\n                return 'sell', 1\n        else:\n            return 'buy', 0.5"
+            "strategy": "def gecko(history):\n        if not history.empty:\n            if history['minutes_remaining'].iloc[-1] < 7:\n                return 'sell', 1\n        else:\n            return 'buy', 0.5"
         }
     ]
 }
