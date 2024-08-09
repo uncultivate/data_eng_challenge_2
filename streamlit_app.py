@@ -68,8 +68,11 @@ target_time = time(15, 0, 0)  # 15:00:00 is 3 PM
 
 # Check if the current time is before or after 3 PM
 if converted_current.time() < target_time:
-    st.title('Tulip Coin Market Opening at 3 PM')
-    st.image('tulip_coin.jpg')
+    col1, col2 = st.columns(2)
+    with col1:
+        st.title('Tulip Coin Market Opening at 3 PM')
+    with col2:
+        st.image('tulip_coin.jpg')
 else:
 
     st.sidebar.write(f"End time: {converted_end_time.time()} AEST")
